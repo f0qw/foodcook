@@ -169,6 +169,8 @@
                     <el-select 
                       v-model="ingredient.ingredient_id" 
                       placeholder="选择食材"
+                      filterable
+                      clearable
                       style="width: 100%"
                     >
                       <el-option
@@ -396,7 +398,8 @@ const handleDialogClose = () => {
 // 生命周期
 onMounted(() => {
   dishesStore.getDishes()
-  ingredientsStore.getIngredients()
+  // 获取所有食材用于选择
+  ingredientsStore.getIngredients({ limit: 1000 })
 })
 </script>
 
