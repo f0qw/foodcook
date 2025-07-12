@@ -9,6 +9,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   // 计算属性
   const isAuthenticated = computed(() => !!token.value)
+  const isRoot = computed(() => user.value?.role === 'root')
 
   // 登录
   const login = async (credentials) => {
@@ -73,6 +74,7 @@ export const useAuthStore = defineStore('auth', () => {
     user,
     token,
     isAuthenticated,
+    isRoot,
     login,
     register,
     getProfile,

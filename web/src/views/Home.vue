@@ -9,8 +9,8 @@
         <div class="nav">
           <el-menu mode="horizontal" :router="true" :default-active="$route.path">
             <el-menu-item index="/">首页</el-menu-item>
-            <el-menu-item index="/dishes" v-if="authStore.isAuthenticated">菜品管理</el-menu-item>
-            <el-menu-item index="/ingredients" v-if="authStore.isAuthenticated">食材管理</el-menu-item>
+            <el-menu-item index="/dishes" v-if="authStore.isAuthenticated && authStore.isRoot">菜品管理</el-menu-item>
+            <el-menu-item index="/ingredients" v-if="authStore.isAuthenticated && authStore.isRoot">食材管理</el-menu-item>
             <el-menu-item index="/meal-records" v-if="authStore.isAuthenticated">用餐记录</el-menu-item>
           </el-menu>
         </div>

@@ -24,13 +24,13 @@ const routes = [
     path: '/dishes',
     name: 'Dishes',
     component: () => import('@/views/Dishes.vue'),
-    meta: { title: '菜品管理', requiresAuth: true }
+    meta: { title: '菜品管理', requiresAuth: true, requiresRoot: true }
   },
   {
     path: '/ingredients',
     name: 'Ingredients',
     component: () => import('@/views/Ingredients.vue'),
-    meta: { title: '食材管理', requiresAuth: true }
+    meta: { title: '食材管理', requiresAuth: true, requiresRoot: true }
   },
   {
     path: '/meal-records',
@@ -61,9 +61,16 @@ router.beforeEach((to, from, next) => {
   // 检查是否需要认证
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     next('/login')
-  } else {
-    next()
+    return
   }
+  
+  // 检查是否需要 root 权限
+  if (to.meta.requiresRoot && !authStore.isRoot) {
+    next('/')
+    return
+  }
+  
+  next()
 })
 
 export default router 

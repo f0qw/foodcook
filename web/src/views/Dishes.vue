@@ -1,211 +1,227 @@
 <template>
   <div class="dishes-page">
-    <div class="page-header">
-      <h1>菜品管理</h1>
-      <el-button type="primary" @click="showCreateDialog = true">
-        <el-icon><Plus /></el-icon>
-        添加菜品
-      </el-button>
-    </div>
-
-    <!-- 搜索和筛选 -->
-    <div class="search-section">
-      <el-row :gutter="20">
-        <el-col :span="8">
-          <el-input
-            v-model="searchKeyword"
-            placeholder="搜索菜品名称..."
-            @keyup.enter="handleSearch"
-          >
-            <template #append>
-              <el-button @click="handleSearch">
-                <el-icon><Search /></el-icon>
-              </el-button>
-            </template>
-          </el-input>
-        </el-col>
-        <el-col :span="6">
-          <el-select v-model="selectedCategory" placeholder="选择分类" clearable @change="handleSearch">
-            <el-option
-              v-for="category in categories"
-              :key="category.id"
-              :label="category.name"
-              :value="category.id"
-            />
-          </el-select>
-        </el-col>
-        <el-col :span="4">
-          <el-button @click="resetSearch">重置</el-button>
-        </el-col>
-      </el-row>
-    </div>
-
-    <!-- 菜品列表 -->
-    <el-table
-      :data="dishesStore.dishes"
-      v-loading="dishesStore.loading"
-      style="width: 100%"
-      class="dishes-table"
-    >
-      <el-table-column prop="id" label="ID" width="80" />
-      <el-table-column label="图片" width="120">
-        <template #default="{ row }">
-          <el-image
-            :src="row.image_url || '/placeholder-dish.jpg'"
-            style="width: 80px; height: 60px"
-            fit="cover"
-          >
-            <template #error>
-              <div class="image-placeholder">
-                <el-icon><Picture /></el-icon>
-              </div>
-            </template>
-          </el-image>
-        </template>
-      </el-table-column>
-      <el-table-column prop="name" label="菜品名称" />
-      <el-table-column prop="description" label="描述" show-overflow-tooltip />
-      <el-table-column prop="price" label="价格" width="100">
-        <template #default="{ row }">
-          ¥{{ row.price }}
-        </template>
-      </el-table-column>
-      <el-table-column prop="category.name" label="分类" width="120" />
-      <el-table-column label="操作" width="200" fixed="right">
-        <template #default="{ row }">
-          <el-button size="small" @click="editDish(row)">编辑</el-button>
-          <el-button size="small" type="danger" @click="deleteDish(row.id)">删除</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
-
-    <!-- 分页 -->
-    <div class="pagination-wrapper">
-      <el-pagination
-        v-model:current-page="dishesStore.currentPage"
-        v-model:page-size="dishesStore.pageSize"
-        :page-sizes="[10, 20, 50, 100]"
-        :total="dishesStore.total"
-        layout="total, sizes, prev, pager, next, jumper"
-        @size-change="handleSizeChange"
-        @current-change="handleCurrentChange"
-      />
-    </div>
-
-    <!-- 创建/编辑菜品对话框 -->
-    <el-dialog
-      v-model="showCreateDialog"
-      :title="editingDish ? '编辑菜品' : '添加菜品'"
-      width="600px"
-    >
-      <el-form
-        ref="dishFormRef"
-        :model="dishForm"
-        :rules="dishRules"
-        label-width="100px"
+    <!-- 权限检查 -->
+    <div v-if="!authStore.isRoot" class="permission-denied">
+      <el-result
+        icon="warning"
+        title="权限不足"
+        sub-title="只有 root 用户才能访问菜品管理功能"
       >
-        <el-form-item label="菜品名称" prop="name">
-          <el-input v-model="dishForm.name" placeholder="请输入菜品名称" />
-        </el-form-item>
-        
-        <el-form-item label="描述" prop="description">
-          <el-input
-            v-model="dishForm.description"
-            type="textarea"
-            :rows="3"
-            placeholder="请输入菜品描述"
-          />
-        </el-form-item>
-        
-        <el-form-item label="价格" prop="price">
-          <el-input-number
-            v-model="dishForm.price"
-            :precision="2"
-            :step="0.1"
-            :min="0"
-            style="width: 100%"
-          />
-        </el-form-item>
-        
-        <el-form-item label="分类" prop="category_id">
-          <el-select v-model="dishForm.category_id" placeholder="选择分类" style="width: 100%">
-            <el-option
-              v-for="category in categories"
-              :key="category.id"
-              :label="category.name"
-              :value="category.id"
-            />
-          </el-select>
-        </el-form-item>
-        
-        <el-form-item label="图片链接" prop="image_url">
-          <el-input v-model="dishForm.image_url" placeholder="请输入图片链接" />
-        </el-form-item>
-        
-        <el-form-item label="制作链接" prop="cooking_link">
-          <el-input v-model="dishForm.cooking_link" placeholder="请输入制作方法链接" />
-        </el-form-item>
-        
-        <el-form-item label="食材" prop="ingredients">
-          <div class="ingredients-section">
-            <div v-for="(ingredient, index) in dishForm.ingredients" :key="index" class="ingredient-item">
-              <el-row :gutter="10">
-                <el-col :span="12">
-                  <el-select 
-                    v-model="ingredient.ingredient_id" 
-                    placeholder="选择食材"
-                    style="width: 100%"
-                  >
-                    <el-option
-                      v-for="ing in ingredientsStore.ingredients"
-                      :key="ing.id"
-                      :label="`${ing.name} (${ing.unit})`"
-                      :value="ing.id"
-                    />
-                  </el-select>
-                </el-col>
-                <el-col :span="8">
-                  <el-input-number
-                    v-model="ingredient.quantity"
-                    :precision="2"
-                    :step="0.1"
-                    :min="0"
-                    placeholder="数量"
-                    style="width: 100%"
-                  />
-                </el-col>
-                <el-col :span="4">
-                  <el-button 
-                    type="danger" 
-                    size="small" 
-                    @click="removeIngredient(index)"
-                  >
-                    删除
-                  </el-button>
-                </el-col>
-              </el-row>
-            </div>
-            <el-button 
-              type="primary" 
-              size="small" 
-              @click="addIngredient"
-              style="margin-top: 10px;"
+        <template #extra>
+          <el-button type="primary" @click="$router.push('/')">返回首页</el-button>
+        </template>
+      </el-result>
+    </div>
+
+    <!-- 菜品管理内容 -->
+    <div v-else>
+      <div class="page-header">
+        <h1>菜品管理</h1>
+        <el-button type="primary" @click="showCreateDialog = true">
+          <el-icon><Plus /></el-icon>
+          添加菜品
+        </el-button>
+      </div>
+
+      <!-- 搜索和筛选 -->
+      <div class="search-section">
+        <el-row :gutter="20">
+          <el-col :span="8">
+            <el-input
+              v-model="searchKeyword"
+              placeholder="搜索菜品名称..."
+              @keyup.enter="handleSearch"
             >
-              添加食材
+              <template #append>
+                <el-button @click="handleSearch">
+                  <el-icon><Search /></el-icon>
+                </el-button>
+              </template>
+            </el-input>
+          </el-col>
+          <el-col :span="6">
+            <el-select v-model="selectedCategory" placeholder="选择分类" clearable @change="handleSearch">
+              <el-option
+                v-for="category in categories"
+                :key="category.id"
+                :label="category.name"
+                :value="category.id"
+              />
+            </el-select>
+          </el-col>
+          <el-col :span="4">
+            <el-button @click="resetSearch">重置</el-button>
+          </el-col>
+        </el-row>
+      </div>
+
+      <!-- 菜品列表 -->
+      <el-table
+        :data="dishesStore.dishes"
+        v-loading="dishesStore.loading"
+        style="width: 100%"
+        class="dishes-table"
+      >
+        <el-table-column prop="id" label="ID" width="80" />
+        <el-table-column label="图片" width="120">
+          <template #default="{ row }">
+            <el-image
+              :src="row.image_url || '/placeholder-dish.jpg'"
+              style="width: 80px; height: 60px"
+              fit="cover"
+            >
+              <template #error>
+                <div class="image-placeholder">
+                  <el-icon><Picture /></el-icon>
+                </div>
+              </template>
+            </el-image>
+          </template>
+        </el-table-column>
+        <el-table-column prop="name" label="菜品名称" />
+        <el-table-column prop="description" label="描述" show-overflow-tooltip />
+        <el-table-column prop="price" label="价格" width="100">
+          <template #default="{ row }">
+            ¥{{ row.price }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="category.name" label="分类" width="120" />
+        <el-table-column label="操作" width="200" fixed="right">
+          <template #default="{ row }">
+            <el-button size="small" @click="editDish(row)">编辑</el-button>
+            <el-button size="small" type="danger" @click="deleteDish(row.id)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <!-- 分页 -->
+      <div class="pagination-wrapper">
+        <el-pagination
+          v-model:current-page="dishesStore.currentPage"
+          v-model:page-size="dishesStore.pageSize"
+          :page-sizes="[10, 20, 50, 100]"
+          :total="dishesStore.total"
+          layout="total, sizes, prev, pager, next, jumper"
+          @size-change="handleSizeChange"
+          @current-change="handleCurrentChange"
+        />
+      </div>
+
+      <!-- 创建/编辑菜品对话框 -->
+      <el-dialog
+        v-model="showCreateDialog"
+        :title="editingDish ? '编辑菜品' : '添加菜品'"
+        width="600px"
+      >
+        <el-form
+          ref="dishFormRef"
+          :model="dishForm"
+          :rules="dishRules"
+          label-width="100px"
+        >
+          <el-form-item label="菜品名称" prop="name">
+            <el-input v-model="dishForm.name" placeholder="请输入菜品名称" />
+          </el-form-item>
+          
+          <el-form-item label="描述" prop="description">
+            <el-input
+              v-model="dishForm.description"
+              type="textarea"
+              :rows="3"
+              placeholder="请输入菜品描述"
+            />
+          </el-form-item>
+          
+          <el-form-item label="价格" prop="price">
+            <el-input-number
+              v-model="dishForm.price"
+              :precision="2"
+              :step="0.1"
+              :min="0"
+              style="width: 100%"
+            />
+          </el-form-item>
+          
+          <el-form-item label="分类" prop="category_id">
+            <el-select v-model="dishForm.category_id" placeholder="选择分类" style="width: 100%">
+              <el-option
+                v-for="category in categories"
+                :key="category.id"
+                :label="category.name"
+                :value="category.id"
+              />
+            </el-select>
+          </el-form-item>
+          
+          <el-form-item label="图片链接" prop="image_url">
+            <el-input v-model="dishForm.image_url" placeholder="请输入图片链接" />
+          </el-form-item>
+          
+          <el-form-item label="制作链接" prop="cooking_link">
+            <el-input v-model="dishForm.cooking_link" placeholder="请输入制作方法链接" />
+          </el-form-item>
+          
+          <el-form-item label="食材" prop="ingredients">
+            <div class="ingredients-section">
+              <div v-for="(ingredient, index) in dishForm.ingredients" :key="index" class="ingredient-item">
+                <el-row :gutter="10">
+                  <el-col :span="12">
+                    <el-select 
+                      v-model="ingredient.ingredient_id" 
+                      placeholder="选择食材"
+                      style="width: 100%"
+                    >
+                      <el-option
+                        v-for="ing in ingredientsStore.ingredients"
+                        :key="ing.id"
+                        :label="`${ing.name} (${ing.unit})`"
+                        :value="ing.id"
+                      />
+                    </el-select>
+                  </el-col>
+                  <el-col :span="8">
+                    <el-input-number
+                      v-model="ingredient.quantity"
+                      :precision="2"
+                      :step="0.1"
+                      :min="0"
+                      placeholder="数量"
+                      style="width: 100%"
+                    />
+                  </el-col>
+                  <el-col :span="4">
+                    <el-button 
+                      type="danger" 
+                      size="small" 
+                      @click="removeIngredient(index)"
+                    >
+                      删除
+                    </el-button>
+                  </el-col>
+                </el-row>
+              </div>
+              <el-button 
+                type="primary" 
+                size="small" 
+                @click="addIngredient"
+                style="margin-top: 10px;"
+              >
+                添加食材
+              </el-button>
+            </div>
+          </el-form-item>
+        </el-form>
+        
+        <template #footer>
+          <span class="dialog-footer">
+            <el-button @click="showCreateDialog = false">取消</el-button>
+            <el-button type="primary" @click="saveDish" :loading="saving">
+              {{ editingDish ? '更新' : '创建' }}
             </el-button>
-          </div>
-        </el-form-item>
-      </el-form>
-      
-      <template #footer>
-        <span class="dialog-footer">
-          <el-button @click="showCreateDialog = false">取消</el-button>
-          <el-button type="primary" @click="saveDish" :loading="saving">
-            {{ editingDish ? '更新' : '创建' }}
-          </el-button>
-        </span>
-      </template>
-    </el-dialog>
+          </span>
+        </template>
+      </el-dialog>
+    </div>
   </div>
 </template>
 
@@ -213,10 +229,12 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useDishesStore } from '@/stores/dishes'
 import { useIngredientsStore } from '@/stores/ingredients'
+import { useAuthStore } from '@/stores/auth'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 const dishesStore = useDishesStore()
 const ingredientsStore = useIngredientsStore()
+const authStore = useAuthStore()
 
 // 响应式数据
 const searchKeyword = ref('')
@@ -461,5 +479,22 @@ onMounted(() => {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+}
+
+.permission-denied {
+  margin-top: 20px;
+  padding: 20px;
+  background-color: #fffbe6;
+  border: 1px solid #ffe58f;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.permission-denied .el-result__title {
+  color: #faad14;
+}
+
+.permission-denied .el-result__subtitle {
+  color: #faad14;
 }
 </style> 

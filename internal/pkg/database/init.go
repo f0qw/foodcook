@@ -3,6 +3,8 @@ package database
 import (
 	"foodcook/internal/domain/models"
 	"log"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 // InitTables 初始化数据库表
@@ -41,6 +43,24 @@ func SeedData() error {
 	if count > 0 {
 		log.Println("Database already has data, skipping seed")
 		return nil
+	}
+
+	// 创建 root 用户
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte("root123"), bcrypt.DefaultCost)
+	if err != nil {
+		log.Printf("Failed to hash password: %v", err)
+		return err
+	}
+
+	rootUser := models.User{
+		Username:     "root",
+		Email:        "root@foodcook.com",
+		PasswordHash: string(hashedPassword),
+		Role:         models.RoleRoot,
+	}
+
+	if err := DB.Create(&rootUser).Error; err != nil {
+		log.Printf("Failed to create root user: %v", err)
 	}
 
 	// 插入默认分类

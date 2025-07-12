@@ -30,24 +30,26 @@ func SetupRoutes(
 			auth.GET("/profile", middleware.AuthMiddleware(), authHandler.GetProfile)
 		}
 
-		// 菜品路由
+		// 菜品路由 - 只有 root 用户可以管理
 		dishes := api.Group("/dishes")
 		{
-			dishes.GET("", dishHandler.List)
-			dishes.GET("/:id", dishHandler.GetByID)
-			dishes.POST("", middleware.AuthMiddleware(), dishHandler.Create)
-			dishes.PUT("/:id", middleware.AuthMiddleware(), dishHandler.Update)
-			dishes.DELETE("/:id", middleware.AuthMiddleware(), dishHandler.Delete)
-			dishes.GET("/search", dishHandler.Search)
+			dishes.GET("", dishHandler.List)          // 所有用户都可以查看菜品列表
+			dishes.GET("/:id", dishHandler.GetByID)   // 所有用户都可以查看菜品详情
+			dishes.GET("/search", dishHandler.Search) // 所有用户都可以搜索菜品
+			// 以下操作需要 root 权限
+			dishes.POST("", middleware.AuthMiddleware(), middleware.RootMiddleware(), dishHandler.Create)
+			dishes.PUT("/:id", middleware.AuthMiddleware(), middleware.RootMiddleware(), dishHandler.Update)
+			dishes.DELETE("/:id", middleware.AuthMiddleware(), middleware.RootMiddleware(), dishHandler.Delete)
 		}
 
-		// 食材路由
+		// 食材路由 - 只有 root 用户可以管理
 		ingredients := api.Group("/ingredients")
 		{
-			ingredients.GET("", ingredientHandler.List)
-			ingredients.POST("", middleware.AuthMiddleware(), ingredientHandler.Create)
-			ingredients.PUT("/:id", middleware.AuthMiddleware(), ingredientHandler.Update)
-			ingredients.DELETE("/:id", middleware.AuthMiddleware(), ingredientHandler.Delete)
+			ingredients.GET("", ingredientHandler.List) // 所有用户都可以查看食材列表
+			// 以下操作需要 root 权限
+			ingredients.POST("", middleware.AuthMiddleware(), middleware.RootMiddleware(), ingredientHandler.Create)
+			ingredients.PUT("/:id", middleware.AuthMiddleware(), middleware.RootMiddleware(), ingredientHandler.Update)
+			ingredients.DELETE("/:id", middleware.AuthMiddleware(), middleware.RootMiddleware(), ingredientHandler.Delete)
 		}
 
 		// 用餐记录路由
