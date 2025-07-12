@@ -56,6 +56,7 @@ func SetupRoutes(
 			mealRecords.GET("", middleware.AuthMiddleware(), mealRecordHandler.List)
 			mealRecords.POST("", middleware.AuthMiddleware(), mealRecordHandler.Create)
 			mealRecords.GET("/:id", middleware.AuthMiddleware(), mealRecordHandler.GetByID)
+			mealRecords.PUT("/:id", middleware.AuthMiddleware(), mealRecordHandler.Update)
 			mealRecords.DELETE("/:id", middleware.AuthMiddleware(), mealRecordHandler.Delete)
 		}
 	}

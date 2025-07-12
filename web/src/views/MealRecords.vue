@@ -42,13 +42,22 @@
             <el-icon><Calendar /></el-icon>
             {{ formatDate(record.created_at) }}
           </div>
-          <el-button
-            size="small"
-            type="danger"
-            @click="deleteRecord(record.id)"
-          >
-            删除
-          </el-button>
+          <div class="record-actions">
+            <el-button
+              size="small"
+              type="primary"
+              @click="editRecord(record)"
+            >
+              编辑
+            </el-button>
+            <el-button
+              size="small"
+              type="danger"
+              @click="deleteRecord(record.id)"
+            >
+              删除
+            </el-button>
+          </div>
         </div>
 
         <div class="record-image" v-if="record.image_url">
@@ -241,6 +250,44 @@
       </div>
     </el-dialog>
 
+    <!-- 编辑用餐记录对话框 -->
+    <el-dialog
+      v-model="showEditDialog"
+      title="编辑用餐记录"
+      width="600px"
+    >
+      <el-form
+        ref="editFormRef"
+        :model="editForm"
+        label-width="100px"
+      >
+        <el-form-item label="用餐感想">
+          <el-input
+            v-model="editForm.thoughts"
+            type="textarea"
+            :rows="3"
+            placeholder="记录一下今天的用餐感受..."
+          />
+        </el-form-item>
+        
+        <el-form-item label="图片链接">
+          <el-input
+            v-model="editForm.image_url"
+            placeholder="可选：添加用餐图片链接"
+          />
+        </el-form-item>
+      </el-form>
+      
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="showEditDialog = false">取消</el-button>
+          <el-button type="primary" @click="updateRecord" :loading="updating">
+            更新记录
+          </el-button>
+        </span>
+      </template>
+    </el-dialog>
+
     <!-- 菜品详情对话框 -->
     <el-dialog
       v-model="showDishDetailDialog"
@@ -298,14 +345,23 @@ const dishesStore = useDishesStore()
 const dateRange = ref([])
 const showCreateDialog = ref(false)
 const showDetailDialog = ref(false)
+const showEditDialog = ref(false)
 const showDishDetailDialog = ref(false)
 const selectedRecord = ref(null)
 const selectedDish = ref(null)
+const editingRecord = ref(null)
 const saving = ref(false)
+const updating = ref(false)
 const recordFormRef = ref()
+const editFormRef = ref()
 
 const recordForm = reactive({
   dish_ids: [],
+  thoughts: '',
+  image_url: ''
+})
+
+const editForm = reactive({
   thoughts: '',
   image_url: ''
 })
@@ -413,6 +469,31 @@ const showDishDetail = (dish) => {
   showDishDetailDialog.value = true
 }
 
+const editRecord = (record) => {
+  editingRecord.value = record
+  Object.assign(editForm, {
+    thoughts: record.thoughts || '',
+    image_url: record.image_url || ''
+  })
+  showEditDialog.value = true
+}
+
+const updateRecord = async () => {
+  if (!editingRecord.value) return
+
+  updating.value = true
+  try {
+    await mealRecordsStore.updateMealRecord(editingRecord.value.id, editForm)
+    showEditDialog.value = false
+    editingRecord.value = null
+    ElMessage.success('用餐记录更新成功')
+  } catch (error) {
+    console.error('更新用餐记录失败:', error)
+  } finally {
+    updating.value = false
+  }
+}
+
 // 生命周期
 onMounted(() => {
   mealRecordsStore.getMealRecords()
@@ -467,6 +548,11 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 15px;
+}
+
+.record-actions {
+  display: flex;
+  gap: 8px;
 }
 
 .record-date {

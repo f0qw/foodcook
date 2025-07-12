@@ -51,6 +51,18 @@ export const useMealRecordsStore = defineStore('mealRecords', () => {
     }
   }
 
+  // 更新用餐记录
+  const updateMealRecord = async (id, data) => {
+    try {
+      const response = await mealRecordsAPI.update(id, data)
+      ElMessage.success('用餐记录更新成功')
+      await getMealRecords()
+      return response
+    } catch (error) {
+      throw error
+    }
+  }
+
   // 删除用餐记录
   const deleteMealRecord = async (id) => {
     try {
@@ -81,6 +93,7 @@ export const useMealRecordsStore = defineStore('mealRecords', () => {
     getMealRecords,
     getMealRecordById,
     createMealRecord,
+    updateMealRecord,
     deleteMealRecord,
     setPage,
     setPageSize

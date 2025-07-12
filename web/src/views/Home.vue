@@ -59,45 +59,67 @@
       <div class="dishes-section">
         <div class="section-header">
           <h2>今日推荐</h2>
-          <el-button v-if="authStore.isAuthenticated" type="primary" @click="showOrderDialog = true">
-            创建用餐记录
-          </el-button>
+          <div class="header-actions" v-if="authStore.isAuthenticated">
+            <el-badge :value="cartStore.totalItems" :hidden="cartStore.totalItems === 0" class="cart-badge">
+              <el-button type="info" @click="showCartDialog = true" :disabled="cartStore.totalItems === 0">
+                <el-icon><ShoppingCart /></el-icon>
+                购物车 ({{ cartStore.totalItems }})
+              </el-button>
+            </el-badge>
+            <el-button type="primary" @click="showOrderDialog = true" :disabled="cartStore.totalItems === 0">
+              创建用餐记录
+            </el-button>
+          </div>
         </div>
 
         <!-- 菜品网格 -->
         <el-row :gutter="20" v-loading="dishesStore.loading">
-          <el-col 
-            v-for="dish in dishesStore.dishes" 
-            :key="dish.id" 
-            :xs="24" 
-            :sm="12" 
-            :md="8" 
-            :lg="6"
-            class="dish-col"
-          >
-            <el-card class="dish-card" @click="showDishDetail(dish)">
-              <div class="dish-image">
-                <el-image
-                  :src="dish.image_url || '/placeholder-dish.jpg'"
-                  fit="cover"
-                  :preview-src-list="[dish.image_url || '/placeholder-dish.jpg']"
-                >
-                  <template #error>
-                    <div class="image-placeholder">
-                      <el-icon><Picture /></el-icon>
-                    </div>
-                  </template>
-                </el-image>
-              </div>
-              <div class="dish-info">
-                <h3>{{ dish.name }}</h3>
-                <p class="dish-description">{{ dish.description }}</p>
-                <div class="dish-meta">
-                  <span class="price">¥{{ dish.price }}</span>
-                  <span class="category" v-if="dish.category">{{ dish.category.name }}</span>
+                      <el-col 
+              v-for="dish in dishesStore.dishes" 
+              :key="dish.id" 
+              :xs="24" 
+              :sm="12" 
+              :md="8" 
+              :lg="6"
+              class="dish-col"
+            >
+              <el-card class="dish-card">
+                <div class="dish-card-content" @click="showDishDetail(dish)">
+                              <div class="dish-image">
+                  <el-image
+                    :src="dish.image_url || '/placeholder-dish.jpg'"
+                    fit="cover"
+                    :preview-src-list="[dish.image_url || '/placeholder-dish.jpg']"
+                  >
+                    <template #error>
+                      <div class="image-placeholder">
+                        <el-icon><Picture /></el-icon>
+                      </div>
+                    </template>
+                  </el-image>
                 </div>
-              </div>
-            </el-card>
+                <div class="dish-info">
+                  <h3>{{ dish.name }}</h3>
+                  <p class="dish-description">{{ dish.description }}</p>
+                  <div class="dish-meta">
+                    <span class="price">¥{{ dish.price }}</span>
+                    <span class="category" v-if="dish.category">{{ dish.category.name }}</span>
+                  </div>
+                </div>
+                <div class="dish-actions">
+                  <el-button 
+                    v-if="authStore.isAuthenticated"
+                    :type="cartStore.isInCart(dish.id) ? 'danger' : 'primary'"
+                    size="small"
+                    @click.stop="toggleCartItem(dish)"
+                  >
+                    <el-icon v-if="cartStore.isInCart(dish.id)"><Remove /></el-icon>
+                    <el-icon v-else><Plus /></el-icon>
+                    {{ cartStore.isInCart(dish.id) ? '移除' : '加入购物车' }}
+                  </el-button>
+                </div>
+                </div>
+              </el-card>
           </el-col>
         </el-row>
 
@@ -156,24 +178,73 @@
       </div>
     </el-dialog>
 
+    <!-- 购物车对话框 -->
+    <el-dialog
+      v-model="showCartDialog"
+      title="购物车"
+      width="600px"
+    >
+      <div v-if="cartStore.totalItems === 0" class="empty-cart">
+        <el-empty description="购物车是空的" />
+      </div>
+      <div v-else class="cart-content">
+        <div class="cart-items">
+          <div v-for="item in cartStore.cartItems" :key="item.id" class="cart-item">
+            <div class="cart-item-info">
+              <el-image
+                :src="item.image_url || '/placeholder-dish.jpg'"
+                style="width: 60px; height: 60px; border-radius: 8px;"
+                fit="cover"
+              />
+              <div class="cart-item-details">
+                <h4>{{ item.name }}</h4>
+                <p class="cart-item-category" v-if="item.category">{{ item.category.name }}</p>
+                <span class="cart-item-price">¥{{ item.price }}</span>
+              </div>
+            </div>
+            <el-button 
+              type="danger" 
+              size="small" 
+              @click="cartStore.removeFromCart(item.id)"
+            >
+              移除
+            </el-button>
+          </div>
+        </div>
+        <div class="cart-summary">
+          <div class="cart-total">
+            <span>总计: </span>
+            <span class="total-price">¥{{ cartStore.totalPrice }}</span>
+          </div>
+        </div>
+      </div>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="showCartDialog = false">关闭</el-button>
+          <el-button type="primary" @click="createMealRecordFromCart" :loading="creating">
+            创建用餐记录
+          </el-button>
+        </span>
+      </template>
+    </el-dialog>
+
     <!-- 创建用餐记录对话框 -->
     <el-dialog
       v-model="showOrderDialog"
       title="创建用餐记录"
       width="500px"
     >
+      <div class="selected-dishes">
+        <h4>已选择的菜品:</h4>
+        <div v-for="item in cartStore.cartItems" :key="item.id" class="selected-dish">
+          <span>{{ item.name }}</span>
+          <span class="dish-price">¥{{ item.price }}</span>
+        </div>
+        <div class="total-section">
+          <strong>总计: ¥{{ cartStore.totalPrice }}</strong>
+        </div>
+      </div>
       <el-form :model="orderForm" label-width="80px">
-        <el-form-item label="选择菜品">
-          <el-checkbox-group v-model="orderForm.dish_ids">
-            <el-checkbox
-              v-for="dish in dishesStore.dishes"
-              :key="dish.id"
-              :label="dish.id"
-            >
-              {{ dish.name }} (¥{{ dish.price }})
-            </el-checkbox>
-          </el-checkbox-group>
-        </el-form-item>
         <el-form-item label="用餐感想">
           <el-input
             v-model="orderForm.thoughts"
@@ -207,17 +278,20 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useDishesStore } from '@/stores/dishes'
 import { useMealRecordsStore } from '@/stores/mealRecords'
+import { useCartStore } from '@/stores/cart'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 const router = useRouter()
 const authStore = useAuthStore()
 const dishesStore = useDishesStore()
 const mealRecordsStore = useMealRecordsStore()
+const cartStore = useCartStore()
 
 // 响应式数据
 const searchKeyword = ref('')
 const dishDetailVisible = ref(false)
 const selectedDish = ref(null)
+const showCartDialog = ref(false)
 const showOrderDialog = ref(false)
 const creating = ref(false)
 
@@ -229,9 +303,7 @@ const orderForm = ref({
 
 // 计算属性
 const totalPrice = computed(() => {
-  return dishesStore.dishes
-    .filter(dish => orderForm.value.dish_ids.includes(dish.id))
-    .reduce((sum, dish) => sum + dish.price, 0)
+  return cartStore.totalPrice
 })
 
 // 方法
@@ -251,6 +323,16 @@ const showDishDetail = (dish) => {
 const handleCloseDishDetail = () => {
   dishDetailVisible.value = false
   selectedDish.value = null
+}
+
+const toggleCartItem = (dish) => {
+  if (cartStore.isInCart(dish.id)) {
+    cartStore.removeFromCart(dish.id)
+    ElMessage.success('已从购物车移除')
+  } else {
+    cartStore.addToCart(dish)
+    ElMessage.success('已添加到购物车')
+  }
 }
 
 const handleSizeChange = (size) => {
@@ -276,15 +358,21 @@ const handleCommand = (command) => {
 }
 
 const createMealRecord = async () => {
-  if (orderForm.value.dish_ids.length === 0) {
+  if (cartStore.totalItems === 0) {
     ElMessage.warning('请至少选择一个菜品')
     return
   }
 
   creating.value = true
   try {
-    await mealRecordsStore.createMealRecord(orderForm.value)
+    const mealRecordData = {
+      dish_ids: cartStore.dishIds,
+      thoughts: orderForm.value.thoughts,
+      image_url: orderForm.value.image_url
+    }
+    await mealRecordsStore.createMealRecord(mealRecordData)
     showOrderDialog.value = false
+    cartStore.clearCart()
     orderForm.value = {
       dish_ids: [],
       thoughts: '',
@@ -296,6 +384,11 @@ const createMealRecord = async () => {
   } finally {
     creating.value = false
   }
+}
+
+const createMealRecordFromCart = () => {
+  showCartDialog.value = false
+  showOrderDialog.value = true
 }
 
 // 生命周期
@@ -385,19 +478,38 @@ onMounted(() => {
   color: #333;
 }
 
+.header-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.cart-badge {
+  margin-right: 10px;
+}
+
 .dish-col {
   margin-bottom: 20px;
 }
 
 .dish-card {
-  cursor: pointer;
   transition: transform 0.3s, box-shadow 0.3s;
   height: 100%;
+}
+
+.dish-card-content {
+  cursor: pointer;
 }
 
 .dish-card:hover {
   transform: translateY(-5px);
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.dish-actions {
+  padding: 10px 15px;
+  border-top: 1px solid #f0f0f0;
+  text-align: center;
 }
 
 .dish-image {
@@ -511,5 +623,108 @@ onMounted(() => {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+}
+
+.empty-cart {
+  text-align: center;
+  padding: 40px 0;
+}
+
+.cart-content {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.cart-items {
+  margin-bottom: 20px;
+}
+
+.cart-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.cart-item:last-child {
+  border-bottom: none;
+}
+
+.cart-item-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex: 1;
+}
+
+.cart-item-details h4 {
+  margin: 0 0 5px 0;
+  color: #333;
+}
+
+.cart-item-category {
+  margin: 0 0 5px 0;
+  color: #666;
+  font-size: 12px;
+}
+
+.cart-item-price {
+  color: #f56c6c;
+  font-weight: bold;
+}
+
+.cart-summary {
+  border-top: 2px solid #f0f0f0;
+  padding-top: 15px;
+}
+
+.cart-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 16px;
+}
+
+.total-price {
+  color: #f56c6c;
+  font-weight: bold;
+  font-size: 18px;
+}
+
+.selected-dishes {
+  margin-bottom: 20px;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+}
+
+.selected-dishes h4 {
+  margin: 0 0 10px 0;
+  color: #333;
+}
+
+.selected-dish {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 0;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.selected-dish:last-child {
+  border-bottom: none;
+}
+
+.dish-price {
+  color: #f56c6c;
+  font-weight: bold;
+}
+
+.total-section {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 2px solid #dee2e6;
+  text-align: right;
 }
 </style> 

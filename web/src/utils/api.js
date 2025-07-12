@@ -125,6 +125,9 @@ export const mealRecordsAPI = {
   // 创建用餐记录
   create: (data) => api.post('/meal-records', data),
   
+  // 更新用餐记录
+  update: (id, data) => api.put(`/meal-records/${id}`, data),
+  
   // 删除用餐记录
   delete: (id) => api.delete(`/meal-records/${id}`)
 }
