@@ -99,6 +99,9 @@ export const ingredientsAPI = {
   // 获取食材列表
   getList: (params) => api.get('/ingredients', { params }),
   
+  // 获取食材详情
+  getById: (id) => api.get(`/ingredients/${id}`),
+  
   // 创建食材
   create: (data) => api.post('/ingredients', data),
   
@@ -106,7 +109,10 @@ export const ingredientsAPI = {
   update: (id, data) => api.put(`/ingredients/${id}`, data),
   
   // 删除食材
-  delete: (id) => api.delete(`/ingredients/${id}`)
+  delete: (id) => api.delete(`/ingredients/${id}`),
+  
+  // 搜索食材
+  search: (params) => api.get('/ingredients/search', { params })
 }
 
 export const mealRecordsAPI = {

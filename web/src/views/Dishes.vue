@@ -145,6 +145,56 @@
         <el-form-item label="制作链接" prop="cooking_link">
           <el-input v-model="dishForm.cooking_link" placeholder="请输入制作方法链接" />
         </el-form-item>
+        
+        <el-form-item label="食材" prop="ingredients">
+          <div class="ingredients-section">
+            <div v-for="(ingredient, index) in dishForm.ingredients" :key="index" class="ingredient-item">
+              <el-row :gutter="10">
+                <el-col :span="12">
+                  <el-select 
+                    v-model="ingredient.ingredient_id" 
+                    placeholder="选择食材"
+                    style="width: 100%"
+                  >
+                    <el-option
+                      v-for="ing in ingredientsStore.ingredients"
+                      :key="ing.id"
+                      :label="`${ing.name} (${ing.unit})`"
+                      :value="ing.id"
+                    />
+                  </el-select>
+                </el-col>
+                <el-col :span="8">
+                  <el-input-number
+                    v-model="ingredient.quantity"
+                    :precision="2"
+                    :step="0.1"
+                    :min="0"
+                    placeholder="数量"
+                    style="width: 100%"
+                  />
+                </el-col>
+                <el-col :span="4">
+                  <el-button 
+                    type="danger" 
+                    size="small" 
+                    @click="removeIngredient(index)"
+                  >
+                    删除
+                  </el-button>
+                </el-col>
+              </el-row>
+            </div>
+            <el-button 
+              type="primary" 
+              size="small" 
+              @click="addIngredient"
+              style="margin-top: 10px;"
+            >
+              添加食材
+            </el-button>
+          </div>
+        </el-form-item>
       </el-form>
       
       <template #footer>
@@ -162,9 +212,11 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { useDishesStore } from '@/stores/dishes'
+import { useIngredientsStore } from '@/stores/ingredients'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 const dishesStore = useDishesStore()
+const ingredientsStore = useIngredientsStore()
 
 // 响应式数据
 const searchKeyword = ref('')
@@ -192,7 +244,8 @@ const dishForm = reactive({
   price: 0,
   category_id: '',
   image_url: '',
-  cooking_link: ''
+  cooking_link: '',
+  ingredients: []
 })
 
 const dishRules = {
@@ -243,7 +296,11 @@ const editDish = (dish) => {
     price: dish.price,
     category_id: dish.category_id,
     image_url: dish.image_url,
-    cooking_link: dish.cooking_link
+    cooking_link: dish.cooking_link,
+    ingredients: dish.ingredients ? dish.ingredients.map(ing => ({
+      ingredient_id: ing.ingredient_id,
+      quantity: ing.quantity
+    })) : []
   })
   showCreateDialog.value = true
 }
@@ -294,11 +351,23 @@ const resetForm = () => {
     price: 0,
     category_id: '',
     image_url: '',
-    cooking_link: ''
+    cooking_link: '',
+    ingredients: []
   })
   if (dishFormRef.value) {
     dishFormRef.value.resetFields()
   }
+}
+
+const addIngredient = () => {
+  dishForm.ingredients.push({
+    ingredient_id: '',
+    quantity: 1
+  })
+}
+
+const removeIngredient = (index) => {
+  dishForm.ingredients.splice(index, 1)
 }
 
 // 监听对话框关闭
@@ -309,6 +378,7 @@ const handleDialogClose = () => {
 // 生命周期
 onMounted(() => {
   dishesStore.getDishes()
+  ingredientsStore.getIngredients()
 })
 </script>
 
@@ -350,7 +420,36 @@ onMounted(() => {
   justify-content: center;
   background-color: #f5f5f5;
   color: #999;
-  font-size: 20px;
+}
+
+.ingredients-section {
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  padding: 15px;
+  background-color: #fafafa;
+}
+
+.ingredient-item {
+  margin-bottom: 10px;
+  padding: 10px;
+  background-color: white;
+  border-radius: 4px;
+  border: 1px solid #e4e7ed;
+}
+
+.ingredient-item:last-child {
+  margin-bottom: 0;
+}
+
+.pagination-wrapper {
+  text-align: center;
+  margin-top: 20px;
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
 }
 
 .pagination-wrapper {

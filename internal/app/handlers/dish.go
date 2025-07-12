@@ -21,21 +21,28 @@ func NewDishHandler(dishRepo repositories.DishRepository) *DishHandler {
 }
 
 type CreateDishRequest struct {
-	Name        string  `json:"name" binding:"required"`
-	Description string  `json:"description"`
-	ImageURL    string  `json:"image_url"`
-	Price       float64 `json:"price" binding:"required,min=0"`
-	CookingLink string  `json:"cooking_link"`
-	CategoryID  *uint   `json:"category_id"`
+	Name        string                  `json:"name" binding:"required"`
+	Description string                  `json:"description"`
+	ImageURL    string                  `json:"image_url"`
+	Price       float64                 `json:"price" binding:"required,min=0"`
+	CookingLink string                  `json:"cooking_link"`
+	CategoryID  *uint                   `json:"category_id"`
+	Ingredients []DishIngredientRequest `json:"ingredients"`
 }
 
 type UpdateDishRequest struct {
-	Name        string  `json:"name"`
-	Description string  `json:"description"`
-	ImageURL    string  `json:"image_url"`
-	Price       float64 `json:"price" binding:"min=0"`
-	CookingLink string  `json:"cooking_link"`
-	CategoryID  *uint   `json:"category_id"`
+	Name        string                  `json:"name"`
+	Description string                  `json:"description"`
+	ImageURL    string                  `json:"image_url"`
+	Price       float64                 `json:"price" binding:"min=0"`
+	CookingLink string                  `json:"cooking_link"`
+	CategoryID  *uint                   `json:"category_id"`
+	Ingredients []DishIngredientRequest `json:"ingredients"`
+}
+
+type DishIngredientRequest struct {
+	IngredientID uint    `json:"ingredient_id" binding:"required"`
+	Quantity     float64 `json:"quantity" binding:"required,min=0"`
 }
 
 func (h *DishHandler) List(c *gin.Context) {
@@ -97,7 +104,17 @@ func (h *DishHandler) Create(c *gin.Context) {
 		CategoryID:  req.CategoryID,
 	}
 
-	if err := h.dishRepo.Create(c.Request.Context(), dish); err != nil {
+	// 转换食材请求为repository类型
+	var ingredients []repositories.DishIngredientRequest
+	for _, ing := range req.Ingredients {
+		ingredients = append(ingredients, repositories.DishIngredientRequest{
+			IngredientID: ing.IngredientID,
+			Quantity:     ing.Quantity,
+		})
+	}
+
+	// 创建菜品和食材关联
+	if err := h.dishRepo.CreateWithIngredients(c.Request.Context(), dish, ingredients); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建菜品失败"})
 		return
 	}
@@ -144,7 +161,17 @@ func (h *DishHandler) Update(c *gin.Context) {
 		dish.CategoryID = req.CategoryID
 	}
 
-	if err := h.dishRepo.Update(c.Request.Context(), dish); err != nil {
+	// 转换食材请求为repository类型
+	var ingredients []repositories.DishIngredientRequest
+	for _, ing := range req.Ingredients {
+		ingredients = append(ingredients, repositories.DishIngredientRequest{
+			IngredientID: ing.IngredientID,
+			Quantity:     ing.Quantity,
+		})
+	}
+
+	// 更新菜品和食材关联
+	if err := h.dishRepo.UpdateWithIngredients(c.Request.Context(), dish, ingredients); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "更新菜品失败"})
 		return
 	}

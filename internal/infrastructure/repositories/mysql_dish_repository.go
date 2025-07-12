@@ -22,7 +22,7 @@ func (r *MySQLDishRepository) List(ctx context.Context, offset, limit int, categ
 	var dishes []*models.Dish
 	var total int64
 
-	query := r.db.WithContext(ctx).Model(&models.Dish{}).Preload("Category")
+	query := r.db.WithContext(ctx).Model(&models.Dish{}).Preload("Category").Preload("Ingredients.Ingredient")
 
 	if categoryID != nil {
 		query = query.Where("category_id = ?", *categoryID)
@@ -44,7 +44,7 @@ func (r *MySQLDishRepository) List(ctx context.Context, offset, limit int, categ
 
 func (r *MySQLDishRepository) GetByID(ctx context.Context, id uint) (*models.Dish, error) {
 	var dish models.Dish
-	result := r.db.WithContext(ctx).Preload("Category").First(&dish, id)
+	result := r.db.WithContext(ctx).Preload("Category").Preload("Ingredients.Ingredient").First(&dish, id)
 	if result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
 			return nil, fmt.Errorf("菜品不存在")
@@ -62,6 +62,41 @@ func (r *MySQLDishRepository) Create(ctx context.Context, dish *models.Dish) err
 	return nil
 }
 
+func (r *MySQLDishRepository) CreateWithIngredients(ctx context.Context, dish *models.Dish, ingredients []repositories.DishIngredientRequest) error {
+	// 开始事务
+	tx := r.db.WithContext(ctx).Begin()
+	if tx.Error != nil {
+		return fmt.Errorf("开始事务失败: %w", tx.Error)
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// 创建菜品
+	if err := tx.Create(dish).Error; err != nil {
+		tx.Rollback()
+		return fmt.Errorf("创建菜品失败: %w", err)
+	}
+
+	// 创建食材关联
+	for _, ingredient := range ingredients {
+		dishIngredient := &models.DishIngredient{
+			DishID:       dish.ID,
+			IngredientID: ingredient.IngredientID,
+			Quantity:     ingredient.Quantity,
+		}
+		if err := tx.Create(dishIngredient).Error; err != nil {
+			tx.Rollback()
+			return fmt.Errorf("创建食材关联失败: %w", err)
+		}
+	}
+
+	// 提交事务
+	return tx.Commit().Error
+}
+
 func (r *MySQLDishRepository) Update(ctx context.Context, dish *models.Dish) error {
 	result := r.db.WithContext(ctx).Save(dish)
 	if result.Error != nil {
@@ -71,6 +106,47 @@ func (r *MySQLDishRepository) Update(ctx context.Context, dish *models.Dish) err
 		return fmt.Errorf("菜品不存在")
 	}
 	return nil
+}
+
+func (r *MySQLDishRepository) UpdateWithIngredients(ctx context.Context, dish *models.Dish, ingredients []repositories.DishIngredientRequest) error {
+	// 开始事务
+	tx := r.db.WithContext(ctx).Begin()
+	if tx.Error != nil {
+		return fmt.Errorf("开始事务失败: %w", tx.Error)
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// 更新菜品
+	if err := tx.Save(dish).Error; err != nil {
+		tx.Rollback()
+		return fmt.Errorf("更新菜品失败: %w", err)
+	}
+
+	// 删除旧的食材关联
+	if err := tx.Where("dish_id = ?", dish.ID).Delete(&models.DishIngredient{}).Error; err != nil {
+		tx.Rollback()
+		return fmt.Errorf("删除旧食材关联失败: %w", err)
+	}
+
+	// 创建新的食材关联
+	for _, ingredient := range ingredients {
+		dishIngredient := &models.DishIngredient{
+			DishID:       dish.ID,
+			IngredientID: ingredient.IngredientID,
+			Quantity:     ingredient.Quantity,
+		}
+		if err := tx.Create(dishIngredient).Error; err != nil {
+			tx.Rollback()
+			return fmt.Errorf("创建食材关联失败: %w", err)
+		}
+	}
+
+	// 提交事务
+	return tx.Commit().Error
 }
 
 func (r *MySQLDishRepository) Delete(ctx context.Context, id uint) error {
