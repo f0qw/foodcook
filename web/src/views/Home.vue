@@ -393,6 +393,8 @@ const createMealRecordFromCart = () => {
 
 // 生命周期
 onMounted(() => {
+  // 确保用户信息已初始化
+  authStore.initUser()
   dishesStore.getDishes()
 })
 </script>
