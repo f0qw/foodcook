@@ -111,7 +111,7 @@ func (h *MealRecordHandler) Create(c *gin.Context) {
 		ImageURL:   req.ImageURL,
 	}
 
-	if err := h.mealRecordRepo.Create(c.Request.Context(), mealRecord); err != nil {
+	if err := h.mealRecordRepo.Create(c.Request.Context(), mealRecord, req.DishIDs); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建用餐记录失败"})
 		return
 	}

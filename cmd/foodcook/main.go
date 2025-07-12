@@ -12,6 +12,7 @@ import (
 
 	"foodcook/internal/app/handlers"
 	"foodcook/internal/app/routes"
+	"foodcook/internal/infrastructure/repositories"
 	"foodcook/internal/pkg/config"
 	"foodcook/internal/pkg/database"
 
@@ -39,18 +40,35 @@ func main() {
 	}
 	defer database.CloseDatabase()
 
+	// 初始化数据库表和数据
+	if err := database.InitTables(); err != nil {
+		log.Fatalf("Failed to initialize tables: %v", err)
+	}
+
+	if err := database.SeedData(); err != nil {
+		log.Printf("Warning: Failed to seed data: %v", err)
+	}
+
 	// 初始化Redis
 	if err := database.InitRedis(); err != nil {
 		log.Fatalf("Failed to initialize redis: %v", err)
 	}
 	defer database.CloseRedis()
 
-	// 创建处理器（这里需要实现具体的仓储层）
-	// TODO: 实现具体的仓储层
-	authHandler := &handlers.AuthHandler{}
-	dishHandler := &handlers.DishHandler{}
-	ingredientHandler := &handlers.IngredientHandler{}
-	mealRecordHandler := &handlers.MealRecordHandler{}
+	// 获取数据库连接
+	db := database.GetDB()
+
+	// 创建仓储层
+	userRepo := repositories.NewMySQLUserRepository(db)
+	dishRepo := repositories.NewMySQLDishRepository(db)
+	ingredientRepo := repositories.NewMySQLIngredientRepository(db)
+	mealRecordRepo := repositories.NewMySQLMealRecordRepository(db)
+
+	// 创建处理器
+	authHandler := handlers.NewAuthHandler(userRepo)
+	dishHandler := handlers.NewDishHandler(dishRepo)
+	ingredientHandler := handlers.NewIngredientHandler(ingredientRepo)
+	mealRecordHandler := handlers.NewMealRecordHandler(mealRecordRepo, dishRepo)
 
 	// 设置路由
 	r := routes.SetupRoutes(authHandler, dishHandler, ingredientHandler, mealRecordHandler)
