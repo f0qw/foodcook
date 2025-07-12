@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS users (
     username VARCHAR(50) UNIQUE NOT NULL,
     email VARCHAR(100) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
+    role VARCHAR(20) DEFAULT 'user',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
@@ -133,4 +134,21 @@ INSERT INTO dish_ingredients (dish_id, ingredient_id, quantity) VALUES
 (4, 12, 0.05), -- 红烧肉：老抽0.05瓶
 (4, 13, 0.05), -- 红烧肉：料酒0.05瓶
 (4, 14, 0.05), -- 红烧肉：盐0.05袋
-(4, 15, 0.1);  -- 红烧肉：糖0.1斤 
+(4, 15, 0.1);  -- 红烧肉：糖0.1斤
+
+-- 创建root用户 (密码: root123)
+INSERT INTO users (username, email, password_hash, role) VALUES
+('root', 'root@foodcook.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'root')
+ON DUPLICATE KEY UPDATE role = 'root';
+
+-- 创建示例用餐记录（确保数据一致性）
+INSERT INTO meal_records (user_id, total_price, thoughts, image_url) VALUES
+(1, 60.00, '今天的麻婆豆腐和宫保鸡丁都很棒！', 'https://example.com/meal1.jpg'),
+(1, 75.00, '白切鸡很嫩，红烧肉肥而不腻', 'https://example.com/meal2.jpg');
+
+-- 为用餐记录添加菜品关联
+INSERT INTO meal_record_dishes (meal_record_id, dish_id, quantity) VALUES
+(1, 1, 1),  -- 用餐记录1：麻婆豆腐
+(1, 2, 1),  -- 用餐记录1：宫保鸡丁
+(2, 3, 1),  -- 用餐记录2：白切鸡
+(2, 4, 1);  -- 用餐记录2：红烧肉 
