@@ -159,7 +159,7 @@ func setDefaults() {
 	viper.SetDefault("upload.allowed_types", []string{"image/jpeg", "image/png", "image/gif"})
 	viper.SetDefault("upload.upload_path", "./uploads")
 
-	viper.SetDefault("cors.allowed_origins", []string{"http://localhost:3000", "http://localhost:5173"})
+	viper.SetDefault("cors.allowed_origins", []string{"*"})
 	viper.SetDefault("cors.allowed_methods", []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"})
 	viper.SetDefault("cors.allowed_headers", []string{"*"})
 	viper.SetDefault("cors.allow_credentials", true)
