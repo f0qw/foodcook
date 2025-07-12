@@ -116,6 +116,18 @@ func (h *IngredientHandler) Delete(c *gin.Context) {
 		return
 	}
 
+	// 检查食材是否被菜品使用
+	isUsed, err := h.ingredientRepo.IsUsedInDishes(c.Request.Context(), uint(id))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "检查食材使用情况失败"})
+		return
+	}
+
+	if isUsed {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "该食材已被菜品使用，无法删除"})
+		return
+	}
+
 	if err := h.ingredientRepo.Delete(c.Request.Context(), uint(id)); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "删除食材失败"})
 		return

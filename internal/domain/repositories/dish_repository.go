@@ -16,6 +16,7 @@ type DishRepository interface {
 	List(ctx context.Context, offset, limit int, categoryID *uint) ([]*models.Dish, int64, error)
 	GetByCategory(ctx context.Context, categoryID uint) ([]*models.Dish, error)
 	Search(ctx context.Context, keyword string, offset, limit int) ([]*models.Dish, int64, error)
+	IsUsedInMealRecords(ctx context.Context, dishID uint) (bool, error)
 }
 
 type DishIngredientRequest struct {

@@ -189,3 +189,16 @@ func (r *MySQLDishRepository) Search(ctx context.Context, keyword string, offset
 
 	return dishes, total, nil
 }
+
+func (r *MySQLDishRepository) IsUsedInMealRecords(ctx context.Context, dishID uint) (bool, error) {
+	var count int64
+	err := r.db.WithContext(ctx).
+		Model(&models.MealRecordDish{}).
+		Joins("JOIN meal_records ON meal_records.id = meal_record_dishes.meal_record_id").
+		Where("meal_record_dishes.dish_id = ? AND meal_records.deleted_at IS NULL", dishID).
+		Count(&count).Error
+	if err != nil {
+		return false, fmt.Errorf("检查菜品使用情况失败: %w", err)
+	}
+	return count > 0, nil
+}

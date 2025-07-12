@@ -186,6 +186,18 @@ func (h *DishHandler) Delete(c *gin.Context) {
 		return
 	}
 
+	// 检查菜品是否被用餐记录使用
+	isUsed, err := h.dishRepo.IsUsedInMealRecords(c.Request.Context(), uint(id))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "检查菜品使用情况失败"})
+		return
+	}
+
+	if isUsed {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "该菜品已被用餐记录使用，无法删除"})
+		return
+	}
+
 	if err := h.dishRepo.Delete(c.Request.Context(), uint(id)); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "删除菜品失败"})
 		return

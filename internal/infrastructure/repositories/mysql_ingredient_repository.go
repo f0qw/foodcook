@@ -54,3 +54,12 @@ func (r *MySQLIngredientRepository) List(ctx context.Context, offset, limit int)
 
 	return ingredients, total, nil
 }
+
+func (r *MySQLIngredientRepository) IsUsedInDishes(ctx context.Context, ingredientID uint) (bool, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&models.DishIngredient{}).Where("ingredient_id = ?", ingredientID).Count(&count).Error
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
