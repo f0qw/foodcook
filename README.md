@@ -167,12 +167,70 @@ npm run build         # 构建生产版本
 
 ## 🐳 Docker 部署
 
+### 开发环境部署
+
 ```bash
-# 使用 Docker Compose
+# 一键启动（推荐）
+./docker-start.sh
+
+# 或手动启动
+docker-compose up -d --build
+
+# 查看服务状态
+docker-compose ps
+
+# 查看日志
+docker-compose logs -f
+```
+
+### 生产环境部署
+
+```bash
+# 1. 复制环境变量文件
+cp env.example .env
+
+# 2. 修改 .env 文件中的配置
+# 特别是密码和JWT密钥
+
+# 3. 启动生产环境
+docker-compose -f docker-compose.prod.yml up -d --build
+```
+
+### 访问地址
+
+- **前端应用**: http://localhost
+- **后端API**: http://localhost/api
+- **数据库**: localhost:3306
+- **Redis**: localhost:6379
+- **phpMyAdmin**: http://localhost:8081 (开发环境)
+
+### 初始账户
+
+- **Root用户**: 用户名 `root`，密码 `password`
+
+### 常用Docker命令
+
+```bash
+# 启动服务
 docker-compose up -d
 
-# 构建镜像
-make build-docker
+# 停止服务
+docker-compose down
+
+# 重启服务
+docker-compose restart
+
+# 查看日志
+docker-compose logs -f app      # 应用日志
+docker-compose logs -f mysql    # 数据库日志
+docker-compose logs -f redis    # Redis日志
+
+# 进入容器
+docker-compose exec app sh      # 进入应用容器
+docker-compose exec mysql mysql -u root -proot foodcook  # 进入数据库
+
+# 清理数据（慎用）
+docker-compose down -v          # 停止并删除数据卷
 ```
 
 ## 📖 详细文档
