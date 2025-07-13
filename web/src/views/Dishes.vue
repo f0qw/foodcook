@@ -231,11 +231,13 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useDishesStore } from '@/stores/dishes'
 import { useIngredientsStore } from '@/stores/ingredients'
+import { useCategoriesStore } from '@/stores/categories'
 import { useAuthStore } from '@/stores/auth'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 const dishesStore = useDishesStore()
 const ingredientsStore = useIngredientsStore()
+const categoriesStore = useCategoriesStore()
 const authStore = useAuthStore()
 
 // 响应式数据
@@ -246,17 +248,8 @@ const editingDish = ref(null)
 const saving = ref(false)
 const dishFormRef = ref()
 
-// 模拟分类数据
-const categories = ref([
-  { id: 1, name: '川菜' },
-  { id: 2, name: '粤菜' },
-  { id: 3, name: '湘菜' },
-  { id: 4, name: '鲁菜' },
-  { id: 5, name: '苏菜' },
-  { id: 6, name: '浙菜' },
-  { id: 7, name: '闽菜' },
-  { id: 8, name: '徽菜' }
-])
+// 分类数据 - 从store获取
+const categories = ref([])
 
 const dishForm = reactive({
   name: '',
@@ -290,6 +283,16 @@ const handleSearch = () => {
     params.category_id = selectedCategory.value
   }
   dishesStore.getDishes(params)
+}
+
+// 加载分类数据
+const loadCategories = async () => {
+  try {
+    await categoriesStore.getCategories()
+    categories.value = categoriesStore.categories
+  } catch (error) {
+    ElMessage.error('加载分类数据失败')
+  }
 }
 
 const resetSearch = () => {
@@ -396,10 +399,12 @@ const handleDialogClose = () => {
 }
 
 // 生命周期
-onMounted(() => {
-  dishesStore.getDishes()
-  // 获取所有食材用于选择
-  ingredientsStore.getIngredients({ limit: 1000 })
+onMounted(async () => {
+  await Promise.all([
+    dishesStore.getDishes(),
+    ingredientsStore.getIngredients({ limit: 1000 }),
+    loadCategories()
+  ])
 })
 </script>
 

@@ -115,6 +115,23 @@ export const ingredientsAPI = {
   search: (params) => api.get('/ingredients/search', { params })
 }
 
+export const categoriesAPI = {
+  // 获取分类列表
+  getList: () => api.get('/categories'),
+  
+  // 获取分类详情
+  getById: (id) => api.get(`/categories/${id}`),
+  
+  // 创建分类
+  create: (data) => api.post('/categories', data),
+  
+  // 更新分类
+  update: (id, data) => api.put(`/categories/${id}`, data),
+  
+  // 删除分类
+  delete: (id) => api.delete(`/categories/${id}`)
+}
+
 export const mealRecordsAPI = {
   // 获取用餐记录列表
   getList: (params) => api.get('/meal-records', { params }),

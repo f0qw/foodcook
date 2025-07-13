@@ -63,15 +63,17 @@ func main() {
 	dishRepo := repositories.NewMySQLDishRepository(db)
 	ingredientRepo := repositories.NewMySQLIngredientRepository(db)
 	mealRecordRepo := repositories.NewMySQLMealRecordRepository(db)
+	categoryRepo := repositories.NewMySQLCategoryRepository(db)
 
 	// 创建处理器
 	authHandler := handlers.NewAuthHandler(userRepo)
 	dishHandler := handlers.NewDishHandler(dishRepo)
 	ingredientHandler := handlers.NewIngredientHandler(ingredientRepo)
 	mealRecordHandler := handlers.NewMealRecordHandler(mealRecordRepo, dishRepo)
+	categoryHandler := handlers.NewCategoryHandler(categoryRepo)
 
 	// 设置路由
-	r := routes.SetupRoutes(authHandler, dishHandler, ingredientHandler, mealRecordHandler)
+	r := routes.SetupRoutes(authHandler, dishHandler, ingredientHandler, mealRecordHandler, categoryHandler)
 
 	// 创建HTTP服务器
 	srv := &http.Server{

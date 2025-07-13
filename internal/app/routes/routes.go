@@ -3,6 +3,8 @@ package routes
 import (
 	"foodcook/internal/app/handlers"
 	"foodcook/internal/app/middleware"
+	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -12,12 +14,21 @@ func SetupRoutes(
 	dishHandler *handlers.DishHandler,
 	ingredientHandler *handlers.IngredientHandler,
 	mealRecordHandler *handlers.MealRecordHandler,
+	categoryHandler *handlers.CategoryHandler,
 ) *gin.Engine {
 	r := gin.Default()
 
 	// 中间件
 	r.Use(middleware.CORSMiddleware())
 	r.Use(middleware.LoggingMiddleware())
+
+	// 健康检查端点
+	r.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"status":    "healthy",
+			"timestamp": time.Now().Format(time.RFC3339),
+		})
+	})
 
 	// API路由组
 	api := r.Group("/api")
@@ -50,6 +61,16 @@ func SetupRoutes(
 			ingredients.POST("", middleware.AuthMiddleware(), middleware.RootMiddleware(), ingredientHandler.Create)
 			ingredients.PUT("/:id", middleware.AuthMiddleware(), middleware.RootMiddleware(), ingredientHandler.Update)
 			ingredients.DELETE("/:id", middleware.AuthMiddleware(), middleware.RootMiddleware(), ingredientHandler.Delete)
+		}
+
+		// 分类路由 - 只有 root 用户可以管理
+		categories := api.Group("/categories")
+		{
+			categories.GET("", categoryHandler.List) // 所有用户都可以查看分类列表
+			// 以下操作需要 root 权限
+			categories.POST("", middleware.AuthMiddleware(), middleware.RootMiddleware(), categoryHandler.Create)
+			categories.PUT("/:id", middleware.AuthMiddleware(), middleware.RootMiddleware(), categoryHandler.Update)
+			categories.DELETE("/:id", middleware.AuthMiddleware(), middleware.RootMiddleware(), categoryHandler.Delete)
 		}
 
 		// 用餐记录路由
