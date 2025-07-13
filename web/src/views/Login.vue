@@ -1,6 +1,17 @@
 <template>
   <div class="login-container">
-    <div class="login-card">
+    <!-- 移动端头部 -->
+    <div v-if="isMobile" class="mobile-header">
+      <div class="mobile-header-content">
+        <el-button @click="$router.go(-1)" type="text" class="back-btn">
+          <el-icon><ArrowLeft /></el-icon>
+        </el-button>
+        <h2>登录</h2>
+        <div></div>
+      </div>
+    </div>
+
+    <div class="login-card" :class="{ 'mobile-login-card': isMobile }">
       <div class="login-header">
         <h1>🍽️ FoodCook</h1>
         <p>欢迎回来，请登录您的账户</p>
@@ -18,6 +29,7 @@
             v-model="loginForm.username"
             placeholder="用户名"
             size="large"
+            :class="{ 'mobile-input': isMobile }"
             prefix-icon="User"
           />
         </el-form-item>
@@ -28,6 +40,7 @@
             type="password"
             placeholder="密码"
             size="large"
+            :class="{ 'mobile-input': isMobile }"
             prefix-icon="Lock"
             show-password
             @keyup.enter="handleLogin"
@@ -39,6 +52,7 @@
             type="primary"
             size="large"
             class="login-button"
+            :class="{ 'mobile-btn': isMobile }"
             :loading="loading"
             @click="handleLogin"
           >
@@ -59,7 +73,7 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { ElMessage } from 'element-plus'
@@ -69,6 +83,7 @@ const authStore = useAuthStore()
 
 const loginFormRef = ref()
 const loading = ref(false)
+const isMobile = ref(false)
 
 const loginForm = reactive({
   username: '',
@@ -85,6 +100,21 @@ const loginRules = {
     { min: 6, max: 20, message: '密码长度在 6 到 20 个字符', trigger: 'blur' }
   ]
 }
+
+// 检测移动端
+const checkMobile = () => {
+  isMobile.value = window.innerWidth <= 768
+}
+
+// 监听窗口大小变化
+onMounted(() => {
+  checkMobile()
+  window.addEventListener('resize', checkMobile)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', checkMobile)
+})
 
 const handleLogin = async () => {
   if (!loginFormRef.value) return
@@ -114,6 +144,35 @@ const handleLogin = async () => {
   padding: 20px;
 }
 
+/* 移动端头部 */
+.mobile-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  padding: 10px 0;
+}
+
+.mobile-header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 15px;
+}
+
+.back-btn {
+  font-size: 18px;
+}
+
+.mobile-header-content h2 {
+  margin: 0;
+  color: #333;
+  font-size: 18px;
+}
+
 .login-card {
   background: white;
   border-radius: 12px;
@@ -121,6 +180,14 @@ const handleLogin = async () => {
   padding: 40px;
   width: 100%;
   max-width: 400px;
+}
+
+.mobile-login-card {
+  margin-top: 60px;
+  padding: 30px 20px;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
 }
 
 .login-header {
@@ -147,6 +214,12 @@ const handleLogin = async () => {
 .login-button {
   width: 100%;
   height: 44px;
+  font-size: 16px;
+}
+
+.mobile-btn {
+  height: 48px;
+  border-radius: 24px;
   font-size: 16px;
 }
 
@@ -179,5 +252,36 @@ const handleLogin = async () => {
 
 .back-home:hover {
   color: #666;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .login-container {
+    padding: 0;
+    background: white;
+  }
+  
+  .login-card {
+    box-shadow: none;
+    border-radius: 0;
+  }
+  
+  .login-header h1 {
+    font-size: 24px;
+  }
+  
+  .login-header p {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .mobile-login-card {
+    padding: 20px 15px;
+  }
+  
+  .login-header {
+    margin-bottom: 25px;
+  }
 }
 </style> 

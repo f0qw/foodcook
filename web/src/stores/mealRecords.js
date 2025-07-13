@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { mealRecordsAPI } from '@/utils/api'
 import { ElMessage } from 'element-plus'
 
@@ -10,8 +10,13 @@ export const useMealRecordsStore = defineStore('mealRecords', () => {
   const currentPage = ref(1)
   const pageSize = ref(10)
 
+  // 计算属性
+  const hasMore = computed(() => {
+    return mealRecords.value.length < total.value
+  })
+
   // 获取用餐记录列表
-  const getMealRecords = async (params = {}) => {
+  const fetchMealRecords = async (params = {}) => {
     loading.value = true
     try {
       const response = await mealRecordsAPI.getList({
@@ -20,6 +25,34 @@ export const useMealRecordsStore = defineStore('mealRecords', () => {
         ...params
       })
       mealRecords.value = response.data
+      total.value = response.total
+      return response
+    } catch (error) {
+      throw error
+    } finally {
+      loading.value = false
+    }
+  }
+
+  // 获取用餐记录列表（兼容旧方法）
+  const getMealRecords = async (params = {}) => {
+    return await fetchMealRecords(params)
+  }
+
+  // 加载更多用餐记录
+  const loadMore = async () => {
+    if (loading.value || !hasMore.value) return
+    
+    loading.value = true
+    try {
+      const nextPage = currentPage.value + 1
+      const response = await mealRecordsAPI.getList({
+        offset: (nextPage - 1) * pageSize.value,
+        limit: pageSize.value
+      })
+      
+      mealRecords.value = [...mealRecords.value, ...response.data]
+      currentPage.value = nextPage
       total.value = response.total
       return response
     } catch (error) {
@@ -44,7 +77,7 @@ export const useMealRecordsStore = defineStore('mealRecords', () => {
     try {
       const response = await mealRecordsAPI.create(data)
       ElMessage.success('用餐记录创建成功')
-      await getMealRecords()
+      await fetchMealRecords()
       return response
     } catch (error) {
       throw error
@@ -56,7 +89,7 @@ export const useMealRecordsStore = defineStore('mealRecords', () => {
     try {
       const response = await mealRecordsAPI.update(id, data)
       ElMessage.success('用餐记录更新成功')
-      await getMealRecords()
+      await fetchMealRecords()
       return response
     } catch (error) {
       throw error
@@ -68,14 +101,14 @@ export const useMealRecordsStore = defineStore('mealRecords', () => {
     try {
       await mealRecordsAPI.delete(id)
       ElMessage.success('用餐记录删除成功')
-      await getMealRecords()
+      await fetchMealRecords()
     } catch (error) {
       throw error
     }
   }
 
   // 设置分页
-  const setPage = (page) => {
+  const setCurrentPage = (page) => {
     currentPage.value = page
   }
 
@@ -90,12 +123,15 @@ export const useMealRecordsStore = defineStore('mealRecords', () => {
     total,
     currentPage,
     pageSize,
+    hasMore,
+    fetchMealRecords,
     getMealRecords,
+    loadMore,
     getMealRecordById,
     createMealRecord,
     updateMealRecord,
     deleteMealRecord,
-    setPage,
+    setCurrentPage,
     setPageSize
   }
 }) 

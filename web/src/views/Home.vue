@@ -1,7 +1,35 @@
 <template>
   <div class="home">
-    <!-- 导航栏 -->
-    <el-header class="header">
+    <!-- 移动端导航栏 -->
+    <el-header class="header mobile-header" v-if="isMobile">
+      <div class="mobile-header-content">
+        <div class="mobile-logo">
+          <h2>🍽️ FoodCook</h2>
+        </div>
+        <div class="mobile-actions">
+          <el-button 
+            v-if="authStore.isAuthenticated"
+            type="primary" 
+            size="small"
+            @click="showCartDialog = true"
+            :disabled="cartStore.totalItems === 0"
+          >
+            🛒 {{ cartStore.totalItems }}
+          </el-button>
+          <el-button 
+            v-else
+            type="primary" 
+            size="small"
+            @click="$router.push('/login')"
+          >
+            登录
+          </el-button>
+        </div>
+      </div>
+    </el-header>
+
+    <!-- 桌面端导航栏 -->
+    <el-header class="header" v-else>
       <div class="header-content">
         <div class="logo">
           <h1>🍽️ FoodCook</h1>
@@ -38,17 +66,18 @@
     </el-header>
 
     <!-- 主要内容 -->
-    <div class="main-content">
+    <div class="main-content" :class="{ 'mobile-content': isMobile }">
       <!-- 搜索区域 -->
       <div class="search-section">
         <el-input
           v-model="searchKeyword"
           placeholder="搜索菜品..."
           class="search-input"
+          :class="{ 'mobile-input': isMobile }"
           @keyup.enter="handleSearch"
         >
           <template #append>
-            <el-button @click="handleSearch">
+            <el-button @click="handleSearch" :class="{ 'mobile-btn': isMobile }">
               <el-icon><Search /></el-icon>
             </el-button>
           </template>
@@ -59,7 +88,7 @@
       <div class="dishes-section">
         <div class="section-header">
           <h2>今日推荐</h2>
-          <div class="header-actions" v-if="authStore.isAuthenticated">
+          <div class="header-actions" v-if="authStore.isAuthenticated && !isMobile">
             <el-badge :value="cartStore.totalItems" :hidden="cartStore.totalItems === 0" class="cart-badge">
               <el-button type="info" @click="showCartDialog = true" :disabled="cartStore.totalItems === 0">
                 <el-icon><ShoppingCart /></el-icon>
@@ -72,20 +101,63 @@
           </div>
         </div>
 
-        <!-- 菜品网格 -->
-        <el-row :gutter="20" v-loading="dishesStore.loading">
-                      <el-col 
-              v-for="dish in dishesStore.dishes" 
-              :key="dish.id" 
-              :xs="24" 
-              :sm="12" 
-              :md="8" 
-              :lg="6"
-              class="dish-col"
-            >
-              <el-card class="dish-card">
-                <div class="dish-card-content" @click="showDishDetail(dish)">
-                              <div class="dish-image">
+        <!-- 移动端菜品网格 -->
+        <div v-if="isMobile" class="mobile-grid" v-loading="dishesStore.loading">
+          <div 
+            v-for="dish in dishesStore.dishes" 
+            :key="dish.id" 
+            class="mobile-dish-card"
+            @click="showDishDetail(dish)"
+          >
+            <div class="mobile-dish-image">
+              <el-image
+                :src="dish.image_url || '/placeholder-dish.jpg'"
+                fit="cover"
+                :preview-src-list="[dish.image_url || '/placeholder-dish.jpg']"
+              >
+                <template #error>
+                  <div class="mobile-image-placeholder">
+                    <el-icon><Picture /></el-icon>
+                  </div>
+                </template>
+              </el-image>
+            </div>
+            <div class="mobile-dish-info">
+              <h4>{{ dish.name }}</h4>
+              <p class="mobile-dish-description">{{ dish.description }}</p>
+              <div class="mobile-dish-meta">
+                <span class="mobile-price">¥{{ dish.price }}</span>
+                <span class="mobile-category" v-if="dish.category">{{ dish.category.name }}</span>
+              </div>
+              <el-button 
+                v-if="authStore.isAuthenticated"
+                :type="cartStore.isInCart(dish.id) ? 'danger' : 'primary'"
+                size="small"
+                class="mobile-cart-btn"
+                @click.stop="toggleCartItem(dish)"
+              >
+                <el-icon v-if="cartStore.isInCart(dish.id)"><Remove /></el-icon>
+                <el-icon v-else><Plus /></el-icon>
+                {{ cartStore.isInCart(dish.id) ? '移除' : '加入' }}
+              </el-button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 桌面端菜品网格 -->
+        <el-row v-else :gutter="20" v-loading="dishesStore.loading">
+          <el-col 
+            v-for="dish in dishesStore.dishes" 
+            :key="dish.id" 
+            :xs="24" 
+            :sm="12" 
+            :md="8" 
+            :lg="6"
+            class="dish-col"
+          >
+            <el-card class="dish-card">
+              <div class="dish-card-content" @click="showDishDetail(dish)">
+                <div class="dish-image">
                   <el-image
                     :src="dish.image_url || '/placeholder-dish.jpg'"
                     fit="cover"
@@ -118,13 +190,13 @@
                     {{ cartStore.isInCart(dish.id) ? '移除' : '加入购物车' }}
                   </el-button>
                 </div>
-                </div>
-              </el-card>
+              </div>
+            </el-card>
           </el-col>
         </el-row>
 
         <!-- 分页 -->
-        <div class="pagination-wrapper">
+        <div class="pagination-wrapper" v-if="!isMobile">
           <el-pagination
             v-model:current-page="dishesStore.currentPage"
             v-model:page-size="dishesStore.pageSize"
@@ -135,6 +207,41 @@
             @current-change="handleCurrentChange"
           />
         </div>
+
+        <!-- 移动端加载更多 -->
+        <div v-if="isMobile && dishesStore.hasMore" class="mobile-load-more">
+          <el-button 
+            type="primary" 
+            :loading="dishesStore.loading"
+            @click="loadMore"
+            class="mobile-btn"
+          >
+            加载更多
+          </el-button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 移动端底部导航 -->
+    <div v-if="isMobile && authStore.isAuthenticated" class="mobile-bottom-nav">
+      <div class="bottom-nav-content">
+        <div class="nav-item" @click="$router.push('/')">
+          <el-icon><House /></el-icon>
+          <span>首页</span>
+        </div>
+        <div class="nav-item" @click="showCartDialog = true">
+          <el-icon><ShoppingCart /></el-icon>
+          <span>购物车</span>
+          <el-badge v-if="cartStore.totalItems > 0" :value="cartStore.totalItems" class="nav-badge" />
+        </div>
+        <div class="nav-item" @click="$router.push('/meal-records')">
+          <el-icon><Document /></el-icon>
+          <span>记录</span>
+        </div>
+        <div class="nav-item" @click="showUserMenu = true">
+          <el-icon><User /></el-icon>
+          <span>我的</span>
+        </div>
       </div>
     </div>
 
@@ -142,7 +249,7 @@
     <el-dialog
       v-model="dishDetailVisible"
       title="菜品详情"
-      width="600px"
+      :width="isMobile ? '90%' : '600px'"
       :before-close="handleCloseDishDetail"
     >
       <div v-if="selectedDish" class="dish-detail">
@@ -182,7 +289,7 @@
     <el-dialog
       v-model="showCartDialog"
       title="购物车"
-      width="600px"
+      :width="isMobile ? '90%' : '600px'"
     >
       <div v-if="cartStore.totalItems === 0" class="empty-cart">
         <el-empty description="购物车是空的" />
@@ -198,205 +305,244 @@
               />
               <div class="cart-item-details">
                 <h4>{{ item.name }}</h4>
-                <p class="cart-item-category" v-if="item.category">{{ item.category.name }}</p>
-                <span class="cart-item-price">¥{{ item.price }}</span>
+                <p class="cart-item-price">¥{{ item.price }}</p>
               </div>
             </div>
-            <el-button 
-              type="danger" 
-              size="small" 
-              @click="cartStore.removeFromCart(item.id)"
-            >
-              移除
-            </el-button>
+            <div class="cart-item-actions">
+              <el-button-group>
+                <el-button size="small" @click="cartStore.decreaseQuantity(item.id)">-</el-button>
+                <el-button size="small" disabled>{{ item.quantity }}</el-button>
+                <el-button size="small" @click="cartStore.increaseQuantity(item.id)">+</el-button>
+              </el-button-group>
+              <el-button 
+                type="danger" 
+                size="small" 
+                @click="cartStore.removeFromCart(item.id)"
+              >
+                删除
+              </el-button>
+            </div>
           </div>
         </div>
         <div class="cart-summary">
           <div class="cart-total">
-            <span>总计: </span>
-            <span class="total-price">¥{{ cartStore.totalPrice }}</span>
+            <span>总计: ¥{{ cartStore.totalPrice }}</span>
           </div>
-        </div>
-      </div>
-      <template #footer>
-        <span class="dialog-footer">
-          <el-button @click="showCartDialog = false">关闭</el-button>
-          <el-button type="primary" @click="createMealRecordFromCart" :loading="creating">
+          <el-button type="primary" @click="showOrderDialog = true" class="mobile-btn">
             创建用餐记录
           </el-button>
-        </span>
-      </template>
+        </div>
+      </div>
     </el-dialog>
 
     <!-- 创建用餐记录对话框 -->
     <el-dialog
       v-model="showOrderDialog"
       title="创建用餐记录"
-      width="500px"
+      :width="isMobile ? '90%' : '600px'"
     >
-      <div class="selected-dishes">
-        <h4>已选择的菜品:</h4>
-        <div v-for="item in cartStore.cartItems" :key="item.id" class="selected-dish">
-          <span>{{ item.name }}</span>
-          <span class="dish-price">¥{{ item.price }}</span>
-        </div>
-        <div class="total-section">
-          <strong>总计: ¥{{ cartStore.totalPrice }}</strong>
-        </div>
-      </div>
       <el-form :model="orderForm" label-width="80px">
+        <el-form-item label="总价">
+          <el-input v-model="orderForm.totalPrice" disabled />
+        </el-form-item>
         <el-form-item label="用餐感想">
-          <el-input
-            v-model="orderForm.thoughts"
-            type="textarea"
+          <el-input 
+            v-model="orderForm.thoughts" 
+            type="textarea" 
             :rows="3"
-            placeholder="记录一下今天的用餐感受..."
+            placeholder="记录一下今天的用餐体验..."
           />
         </el-form-item>
         <el-form-item label="图片链接">
-          <el-input
-            v-model="orderForm.image_url"
-            placeholder="可选：添加用餐图片链接"
+          <el-input 
+            v-model="orderForm.imageUrl" 
+            placeholder="可选：添加用餐照片链接"
           />
         </el-form-item>
       </el-form>
       <template #footer>
-        <span class="dialog-footer">
-          <el-button @click="showOrderDialog = false">取消</el-button>
-          <el-button type="primary" @click="createMealRecord" :loading="creating">
-            创建记录
-          </el-button>
-        </span>
+        <el-button @click="showOrderDialog = false">取消</el-button>
+        <el-button type="primary" @click="createMealRecord" :loading="creatingOrder">
+          创建记录
+        </el-button>
       </template>
     </el-dialog>
+
+    <!-- 移动端用户菜单 -->
+    <el-drawer
+      v-model="showUserMenu"
+      title="个人中心"
+      direction="rtl"
+      size="80%"
+    >
+      <div class="mobile-user-menu">
+        <div class="user-info">
+          <el-avatar :size="60" icon="UserFilled" />
+          <h3>{{ authStore.user?.username }}</h3>
+          <p>{{ authStore.user?.email }}</p>
+        </div>
+        <el-menu>
+          <el-menu-item @click="$router.push('/meal-records')">
+            <el-icon><Document /></el-icon>
+            <span>我的用餐记录</span>
+          </el-menu-item>
+          <el-menu-item v-if="authStore.isRoot" @click="$router.push('/dishes')">
+            <el-icon><Food /></el-icon>
+            <span>菜品管理</span>
+          </el-menu-item>
+          <el-menu-item v-if="authStore.isRoot" @click="$router.push('/ingredients')">
+            <el-icon><Basket /></el-icon>
+            <span>食材管理</span>
+          </el-menu-item>
+          <el-menu-item @click="handleLogout">
+            <el-icon><SwitchButton /></el-icon>
+            <span>退出登录</span>
+          </el-menu-item>
+        </el-menu>
+      </div>
+    </el-drawer>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
-import { useDishesStore } from '@/stores/dishes'
-import { useMealRecordsStore } from '@/stores/mealRecords'
-import { useCartStore } from '@/stores/cart'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
+import { useAuthStore } from '../stores/auth'
+import { useDishesStore } from '../stores/dishes'
+import { useCartStore } from '../stores/cart'
+import { useMealRecordsStore } from '../stores/mealRecords'
 
 const router = useRouter()
 const authStore = useAuthStore()
 const dishesStore = useDishesStore()
-const mealRecordsStore = useMealRecordsStore()
 const cartStore = useCartStore()
+const mealRecordsStore = useMealRecordsStore()
 
 // 响应式数据
 const searchKeyword = ref('')
 const dishDetailVisible = ref(false)
-const selectedDish = ref(null)
 const showCartDialog = ref(false)
 const showOrderDialog = ref(false)
-const creating = ref(false)
+const showUserMenu = ref(false)
+const selectedDish = ref(null)
+const creatingOrder = ref(false)
+const isMobile = ref(false)
 
+// 订单表单
 const orderForm = ref({
-  dish_ids: [],
+  totalPrice: 0,
   thoughts: '',
-  image_url: ''
+  imageUrl: ''
 })
 
-// 计算属性
-const totalPrice = computed(() => {
-  return cartStore.totalPrice
-})
-
-// 方法
-const handleSearch = () => {
-  if (searchKeyword.value.trim()) {
-    dishesStore.searchDishes(searchKeyword.value.trim())
-  } else {
-    dishesStore.getDishes()
-  }
+// 检测移动端
+const checkMobile = () => {
+  isMobile.value = window.innerWidth <= 768
 }
 
+// 监听窗口大小变化
+onMounted(() => {
+  checkMobile()
+  window.addEventListener('resize', checkMobile)
+  loadDishes()
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', checkMobile)
+})
+
+// 加载菜品
+const loadDishes = async () => {
+  await dishesStore.fetchDishes()
+}
+
+// 搜索菜品
+const handleSearch = () => {
+  dishesStore.searchDishes(searchKeyword.value)
+}
+
+// 显示菜品详情
 const showDishDetail = (dish) => {
   selectedDish.value = dish
   dishDetailVisible.value = true
 }
 
+// 关闭菜品详情
 const handleCloseDishDetail = () => {
   dishDetailVisible.value = false
   selectedDish.value = null
 }
 
+// 切换购物车项目
 const toggleCartItem = (dish) => {
   if (cartStore.isInCart(dish.id)) {
     cartStore.removeFromCart(dish.id)
     ElMessage.success('已从购物车移除')
   } else {
     cartStore.addToCart(dish)
-    ElMessage.success('已添加到购物车')
+    ElMessage.success('已加入购物车')
   }
 }
 
-const handleSizeChange = (size) => {
-  dishesStore.setPageSize(size)
-  dishesStore.getDishes()
-}
-
-const handleCurrentChange = (page) => {
-  dishesStore.setPage(page)
-  dishesStore.getDishes()
-}
-
-const handleCommand = (command) => {
-  switch (command) {
-    case 'profile':
-      router.push('/profile')
-      break
-    case 'logout':
-      authStore.logout()
-      router.push('/')
-      break
-  }
-}
-
+// 创建用餐记录
 const createMealRecord = async () => {
   if (cartStore.totalItems === 0) {
-    ElMessage.warning('请至少选择一个菜品')
+    ElMessage.warning('购物车为空')
     return
   }
 
-  creating.value = true
+  creatingOrder.value = true
   try {
-    const mealRecordData = {
-      dish_ids: cartStore.dishIds,
+    const dishIds = cartStore.cartItems.map(item => item.id)
+
+    await mealRecordsStore.createMealRecord({
+      dish_ids: dishIds,
       thoughts: orderForm.value.thoughts,
-      image_url: orderForm.value.image_url
-    }
-    await mealRecordsStore.createMealRecord(mealRecordData)
-    showOrderDialog.value = false
+      image_url: orderForm.value.imageUrl
+    })
+
     cartStore.clearCart()
-    orderForm.value = {
-      dish_ids: [],
-      thoughts: '',
-      image_url: ''
-    }
-    ElMessage.success(`用餐记录创建成功！总价格：¥${totalPrice.value}`)
+    showOrderDialog.value = false
+    orderForm.value = { totalPrice: 0, thoughts: '', imageUrl: '' }
+    ElMessage.success('用餐记录创建成功')
   } catch (error) {
-    console.error('创建用餐记录失败:', error)
+    ElMessage.error('创建用餐记录失败')
   } finally {
-    creating.value = false
+    creatingOrder.value = false
   }
 }
 
-const createMealRecordFromCart = () => {
-  showCartDialog.value = false
-  showOrderDialog.value = true
+// 加载更多
+const loadMore = async () => {
+  await dishesStore.loadMore()
 }
 
-// 生命周期
-onMounted(() => {
-  // 确保用户信息已初始化
-  authStore.initUser()
-  dishesStore.getDishes()
-})
+// 分页处理
+const handleSizeChange = (size) => {
+  dishesStore.setPageSize(size)
+  loadDishes()
+}
+
+const handleCurrentChange = (page) => {
+  dishesStore.setCurrentPage(page)
+  loadDishes()
+}
+
+// 用户操作
+const handleCommand = (command) => {
+  if (command === 'logout') {
+    handleLogout()
+  } else if (command === 'profile') {
+    // 处理个人中心
+  }
+}
+
+const handleLogout = () => {
+  authStore.logout()
+  router.push('/login')
+  ElMessage.success('已退出登录')
+}
 </script>
 
 <style scoped>
@@ -405,26 +551,27 @@ onMounted(() => {
   background-color: #f5f5f5;
 }
 
+/* 桌面端样式 */
 .header {
-  background-color: #fff;
+  background: white;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: 1000;
 }
 
 .header-content {
-  max-width: 1200px;
-  margin: 0 auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
 }
 
 .logo h1 {
   margin: 0;
-  color: #409eff;
+  color: #409EFF;
   font-size: 24px;
 }
 
@@ -436,7 +583,6 @@ onMounted(() => {
 .user-actions {
   display: flex;
   gap: 10px;
-  align-items: center;
 }
 
 .user-info {
@@ -444,7 +590,7 @@ onMounted(() => {
   align-items: center;
   gap: 5px;
   cursor: pointer;
-  padding: 5px 10px;
+  padding: 8px 12px;
   border-radius: 4px;
   transition: background-color 0.3s;
 }
@@ -461,11 +607,10 @@ onMounted(() => {
 
 .search-section {
   margin-bottom: 30px;
-  text-align: center;
 }
 
 .search-input {
-  max-width: 500px;
+  max-width: 400px;
 }
 
 .section-header {
@@ -483,11 +628,6 @@ onMounted(() => {
 .header-actions {
   display: flex;
   gap: 10px;
-  align-items: center;
-}
-
-.cart-badge {
-  margin-right: 10px;
 }
 
 .dish-col {
@@ -495,11 +635,8 @@ onMounted(() => {
 }
 
 .dish-card {
-  transition: transform 0.3s, box-shadow 0.3s;
   height: 100%;
-}
-
-.dish-card-content {
+  transition: transform 0.3s, box-shadow 0.3s;
   cursor: pointer;
 }
 
@@ -508,15 +645,17 @@ onMounted(() => {
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
 }
 
-.dish-actions {
-  padding: 10px 15px;
-  border-top: 1px solid #f0f0f0;
-  text-align: center;
+.dish-card-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .dish-image {
   height: 200px;
   overflow: hidden;
+  border-radius: 8px;
+  margin-bottom: 15px;
 }
 
 .dish-image .el-image {
@@ -525,22 +664,22 @@ onMounted(() => {
 }
 
 .image-placeholder {
-  width: 100%;
-  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
+  height: 100%;
   background-color: #f5f5f5;
   color: #999;
-  font-size: 40px;
+  font-size: 24px;
 }
 
 .dish-info {
-  padding: 15px;
+  flex: 1;
+  margin-bottom: 15px;
 }
 
 .dish-info h3 {
-  margin: 0 0 10px 0;
+  margin: 0 0 8px 0;
   color: #333;
   font-size: 18px;
 }
@@ -548,8 +687,8 @@ onMounted(() => {
 .dish-description {
   color: #666;
   font-size: 14px;
-  margin-bottom: 15px;
   line-height: 1.4;
+  margin-bottom: 10px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -569,22 +708,208 @@ onMounted(() => {
 }
 
 .category {
-  background-color: #409eff;
-  color: white;
+  color: #409EFF;
+  font-size: 12px;
+  background-color: #ecf5ff;
   padding: 2px 8px;
   border-radius: 12px;
-  font-size: 12px;
+}
+
+.dish-actions {
+  display: flex;
+  justify-content: center;
 }
 
 .pagination-wrapper {
-  text-align: center;
   margin-top: 30px;
+  display: flex;
+  justify-content: center;
 }
 
+/* 移动端样式 */
+.mobile-header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 15px;
+  height: 100%;
+}
+
+.mobile-logo h2 {
+  margin: 0;
+  color: #409EFF;
+  font-size: 20px;
+}
+
+.mobile-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.mobile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  padding: 10px 0;
+}
+
+.mobile-dish-card {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s;
+}
+
+.mobile-dish-card:active {
+  transform: scale(0.98);
+}
+
+.mobile-dish-image {
+  height: 120px;
+  overflow: hidden;
+}
+
+.mobile-dish-image .el-image {
+  width: 100%;
+  height: 100%;
+}
+
+.mobile-image-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  background-color: #f5f5f5;
+  color: #999;
+  font-size: 20px;
+}
+
+.mobile-dish-info {
+  padding: 12px;
+}
+
+.mobile-dish-info h4 {
+  margin: 0 0 6px 0;
+  font-size: 16px;
+  color: #333;
+}
+
+.mobile-dish-description {
+  color: #666;
+  font-size: 12px;
+  line-height: 1.3;
+  margin-bottom: 8px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.mobile-dish-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.mobile-price {
+  color: #f56c6c;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.mobile-category {
+  color: #409EFF;
+  font-size: 10px;
+  background-color: #ecf5ff;
+  padding: 2px 6px;
+  border-radius: 8px;
+}
+
+.mobile-cart-btn {
+  width: 100%;
+  height: 32px;
+  font-size: 12px;
+}
+
+.mobile-load-more {
+  text-align: center;
+  margin: 20px 0;
+}
+
+.mobile-bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  border-top: 1px solid #eee;
+  z-index: 1000;
+  padding: 8px 0;
+}
+
+.bottom-nav-content {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+}
+
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px;
+  cursor: pointer;
+  position: relative;
+  color: #666;
+  transition: color 0.3s;
+}
+
+.nav-item:hover {
+  color: #409EFF;
+}
+
+.nav-item span {
+  font-size: 12px;
+}
+
+.nav-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+
+.mobile-user-menu {
+  padding: 20px;
+}
+
+.mobile-user-menu .user-info {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.mobile-user-menu .user-info h3 {
+  margin: 10px 0 5px 0;
+  color: #333;
+}
+
+.mobile-user-menu .user-info p {
+  color: #666;
+  margin: 0;
+}
+
+/* 对话框样式 */
 .dish-detail {
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+
+.dish-detail-image {
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 .dish-detail-info h3 {
@@ -594,17 +919,17 @@ onMounted(() => {
 
 .description {
   color: #666;
-  margin-bottom: 15px;
   line-height: 1.6;
+  margin-bottom: 15px;
 }
 
 .meta p {
-  margin: 5px 0;
+  margin: 8px 0;
   color: #333;
 }
 
 .meta a {
-  color: #409eff;
+  color: #409EFF;
   text-decoration: none;
 }
 
@@ -618,27 +943,19 @@ onMounted(() => {
 }
 
 .ingredient-tag {
-  margin: 5px 5px 5px 0;
-}
-
-.dialog-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-}
-
-.empty-cart {
-  text-align: center;
-  padding: 40px 0;
+  margin: 0 5px 5px 0;
 }
 
 .cart-content {
-  max-height: 400px;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .cart-items {
-  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
 }
 
 .cart-item {
@@ -646,11 +963,8 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 15px;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.cart-item:last-child {
-  border-bottom: none;
+  background-color: #f9f9f9;
+  border-radius: 8px;
 }
 
 .cart-item-info {
@@ -665,68 +979,66 @@ onMounted(() => {
   color: #333;
 }
 
-.cart-item-category {
-  margin: 0 0 5px 0;
-  color: #666;
-  font-size: 12px;
-}
-
 .cart-item-price {
   color: #f56c6c;
   font-weight: bold;
+  margin: 0;
+}
+
+.cart-item-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-end;
 }
 
 .cart-summary {
-  border-top: 2px solid #f0f0f0;
-  padding-top: 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 20px;
+  border-top: 1px solid #eee;
 }
 
 .cart-total {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 16px;
-}
-
-.total-price {
-  color: #f56c6c;
-  font-weight: bold;
   font-size: 18px;
-}
-
-.selected-dishes {
-  margin-bottom: 20px;
-  padding: 15px;
-  background-color: #f8f9fa;
-  border-radius: 8px;
-}
-
-.selected-dishes h4 {
-  margin: 0 0 10px 0;
+  font-weight: bold;
   color: #333;
 }
 
-.selected-dish {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 5px 0;
-  border-bottom: 1px solid #e9ecef;
+.empty-cart {
+  text-align: center;
+  padding: 40px 0;
 }
 
-.selected-dish:last-child {
-  border-bottom: none;
+/* 响应式适配 */
+@media (max-width: 768px) {
+  .main-content {
+    padding: 10px;
+  }
+  
+  .search-section {
+    margin-bottom: 20px;
+  }
+  
+  .section-header {
+    flex-direction: column;
+    gap: 15px;
+    align-items: flex-start;
+  }
+  
+  .mobile-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
-.dish-price {
-  color: #f56c6c;
-  font-weight: bold;
-}
-
-.total-section {
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 2px solid #dee2e6;
-  text-align: right;
+@media (max-width: 480px) {
+  .mobile-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .main-content {
+    padding: 5px;
+  }
 }
 </style> 
