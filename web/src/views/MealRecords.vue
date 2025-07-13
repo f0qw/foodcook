@@ -76,9 +76,8 @@
           <div class="mobile-record-image" v-if="record.image_url">
             <el-image
               :src="record.image_url"
-              fit="cover"
+              fit="contain"
               style="width: 100%; height: 120px; border-radius: 8px;"
-              :preview-src-list="[record.image_url]"
             >
               <template #error>
                 <div class="mobile-image-placeholder">
@@ -175,9 +174,8 @@
           <div class="record-image" v-if="record.image_url">
             <el-image
               :src="record.image_url || '/default-dish.jpg'"
-              fit="cover"
+              fit="contain"
               style="width: 100%; height: 200px;"
-              :preview-src-list="[record.image_url || '/default-dish.jpg']"
             >
               <template #error>
                 <div class="image-placeholder">
@@ -320,7 +318,7 @@
               <div class="dish-detail-image">
                 <el-image
                   :src="dishItem.dish.image_url || '/placeholder-dish.jpg'"
-                  fit="cover"
+                  fit="contain"
                   style="width: 100%; height: 120px; border-radius: 8px;"
                 />
               </div>
@@ -347,9 +345,8 @@
           <h3>用餐照片</h3>
           <el-image
             :src="selectedRecord.image_url"
-            fit="cover"
+            fit="contain"
             style="width: 100%; max-height: 300px; border-radius: 8px;"
-            :preview-src-list="[selectedRecord.image_url]"
           />
         </div>
       </div>
@@ -404,7 +401,7 @@
         <div class="dish-detail-image">
           <el-image
             :src="selectedDish.image_url || '/placeholder-dish.jpg'"
-            fit="cover"
+            fit="contain"
             style="width: 100%; height: 200px;"
           />
         </div>

@@ -68,7 +68,7 @@
             <el-image
               :src="row.image_url || '/placeholder-dish.jpg'"
               style="width: 80px; height: 60px"
-              fit="cover"
+              fit="contain"
             >
               <template #error>
                 <div class="image-placeholder">

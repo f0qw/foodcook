@@ -112,8 +112,7 @@
             <div class="mobile-dish-image">
               <el-image
                 :src="dish.image_url || '/placeholder-dish.jpg'"
-                fit="cover"
-                :preview-src-list="[dish.image_url || '/placeholder-dish.jpg']"
+                fit="contain"
               >
                 <template #error>
                   <div class="mobile-image-placeholder">
@@ -160,8 +159,7 @@
                 <div class="dish-image">
                   <el-image
                     :src="dish.image_url || '/placeholder-dish.jpg'"
-                    fit="cover"
-                    :preview-src-list="[dish.image_url || '/placeholder-dish.jpg']"
+                    fit="contain"
                   >
                     <template #error>
                       <div class="image-placeholder">
@@ -256,7 +254,7 @@
         <div class="dish-detail-image">
           <el-image
             :src="selectedDish.image_url || '/placeholder-dish.jpg'"
-            fit="cover"
+            fit="contain"
             style="width: 100%; height: 200px;"
           />
         </div>
@@ -301,7 +299,7 @@
               <el-image
                 :src="item.image_url || '/placeholder-dish.jpg'"
                 style="width: 60px; height: 60px; border-radius: 8px;"
-                fit="cover"
+                fit="contain"
               />
               <div class="cart-item-details">
                 <h4>{{ item.name }}</h4>
